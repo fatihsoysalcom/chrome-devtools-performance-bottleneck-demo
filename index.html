@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome DevTools Performance Demo</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; line-height: 1.6; }
+        #output { margin-top: 20px; border: 1px solid #ccc; padding: 10px; min-height: 100px; overflow-y: auto; background-color: #f9f9f9; }
+        .item { padding: 3px 0; border-bottom: 1px dotted #eee; font-size: 0.9em; }
+        .item:last-child { border-bottom: none; }
+        .highlight { background-color: yellow; transition: background-color 0.2s; }
+        button { padding: 10px 15px; font-size: 16px; cursor: pointer; margin-right: 10px; border: 1px solid #007bff; background-color: #007bff; color: white; border-radius: 4px; }
+        button:hover:not(:disabled) { background-color: #0056b3; border-color: #0056b3; }
+        button:disabled { background-color: #cccccc; border-color: #cccccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>Chrome DevTools Performance Demo</h1>
+    <p>Click the "Start Heavy Operation" button to simulate performance bottlenecks. While the operation is running, try clicking the "Try to click me" button to observe UI unresponsiveness. Then, analyze the performance profile in Chrome DevTools (Performance tab).</p>
+    <button id="startBtn">Start Heavy Operation</button>
+    <button id="responsiveBtn">Try to click me during heavy operation</button>
+    <div id="output"></div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const responsiveBtn = document.getElementById('responsiveBtn');
+        const outputDiv = document.getElementById('output');
+        let responsiveClickCount = 0;
+
+        responsiveBtn.addEventListener('click', () => {
+            responsiveClickCount++;
+            responsiveBtn.textContent = `Clicked ${responsiveClickCount} times (responsive)`;
+            // Add a temporary visual cue that this button was clicked
+            responsiveBtn.classList.add('highlight');
+            setTimeout(() => responsiveBtn.classList.remove('highlight'), 200);
+        });
+
+        startBtn.addEventListener('click', () => {
+            outputDiv.innerHTML = '<h2>Operation Log:</h2>';
+            startBtn.disabled = true;
+            responsiveBtn.textContent = `Try to click me during heavy operation`; // Reset responsive button text
+            responsiveClickCount = 0;
+            outputDiv.innerHTML += '<p>Starting heavy operation...</p>';
+
+            // --- Performance Bottleneck 1: Long-running JavaScript Task ---
+            // This loop performs a CPU-intensive calculation, blocking the main thread.
+            // You will see a long task in the Chrome DevTools Performance tab, making the UI unresponsive.
+            console.time('Heavy CPU Task'); // Marks the start of the task in DevTools
+            let result = 0;
+            for (let i = 0; i < 500000000; i++) { // A large number to ensure significant blocking
+                result += Math.sqrt(i);
+            }
+            console.timeEnd('Heavy CPU Task'); // Marks the end of the task in DevTools
+            outputDiv.innerHTML += `<p>CPU Task finished. Result: ${result.toFixed(2)}</p>`;
+
+            // --- Performance Bottleneck 2: Excessive DOM Manipulation ---
+            // This adds a large number of elements to the DOM, causing significant layout and paint events.
+            // These events will be visible in the DevTools Performance tab, contributing to rendering time.
+            outputDiv.innerHTML += '<p>Adding many DOM elements...</p>';
+            const fragment = document.createDocumentFragment();
+            for (let i = 0; i < 1000; i++) { // Add 1000 elements
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.textContent = `Item ${i + 1}`; // Example content
+                fragment.appendChild(div);
+            }
+            outputDiv.appendChild(fragment); // Appending once minimizes reflows, but still a large DOM update
+
+            // --- Performance Bottleneck 3: Another Long-running JavaScript Task ---
+            // Demonstrates that multiple blocking tasks can occur.
+            console.time('Another CPU Task');
+            let anotherResult = 0;
+            for (let i = 0; i < 100000000; i++) {
+                anotherResult += Math.sin(i) * Math.cos(i);
+            }
+            console.timeEnd('Another CPU Task');
+            outputDiv.innerHTML += `<p>Another CPU Task finished. Result: ${anotherResult.toFixed(2)}</p>`;
+
+            outputDiv.innerHTML += '<p><strong>Operation finished!</strong></p>';
+            startBtn.disabled = false;
+        });
+    </script>
+</body>
+</html>
